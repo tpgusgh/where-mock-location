@@ -13,6 +13,7 @@ import androidx.core.app.NotificationCompat
 class MockLocationService : Service() {
 
     private lateinit var gateway: LocationProviderGateway
+    private var isStarted: Boolean = false
 
     override fun onCreate() {
         super.onCreate()
@@ -23,20 +24,26 @@ class MockLocationService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START -> {
-                startForeground(NOTIFICATION_ID, buildNotification())
-                gateway.start()
+                if (!isStarted) {
+                    startForeground(NOTIFICATION_ID, buildNotification())
+                    gateway.start()
+                    isStarted = true
+                }
             }
             ACTION_UPDATE -> {
                 val lat = intent.getDoubleExtra(EXTRA_LAT, Double.NaN)
                 val lng = intent.getDoubleExtra(EXTRA_LNG, Double.NaN)
-                if (!lat.isNaN() && !lng.isNaN()) {
+                if (isStarted && !lat.isNaN() && !lng.isNaN()) {
                     gateway.update(lat, lng)
                 }
             }
             ACTION_STOP -> {
-                gateway.stop()
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
+                if (isStarted) {
+                    gateway.stop()
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                }
+                isStarted = false
             }
         }
         return START_NOT_STICKY
