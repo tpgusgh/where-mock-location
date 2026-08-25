@@ -1,0 +1,71 @@
+package com.tpgusgh.wheremocklocation
+
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.Service
+import android.content.Context
+import android.content.Intent
+import android.location.LocationManager
+import android.os.Build
+import android.os.IBinder
+import androidx.core.app.NotificationCompat
+
+class MockLocationService : Service() {
+
+    private lateinit var gateway: LocationProviderGateway
+
+    override fun onCreate() {
+        super.onCreate()
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        gateway = SystemLocationProviderGateway(locationManager)
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        when (intent?.action) {
+            ACTION_START -> {
+                startForeground(NOTIFICATION_ID, buildNotification())
+                gateway.start()
+            }
+            ACTION_UPDATE -> {
+                val lat = intent.getDoubleExtra(EXTRA_LAT, Double.NaN)
+                val lng = intent.getDoubleExtra(EXTRA_LNG, Double.NaN)
+                if (!lat.isNaN() && !lng.isNaN()) {
+                    gateway.update(lat, lng)
+                }
+            }
+            ACTION_STOP -> {
+                gateway.stop()
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+            }
+        }
+        return START_NOT_STICKY
+    }
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    private fun buildNotification() = run {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(
+                NotificationChannel(CHANNEL_ID, "Mock location", NotificationManager.IMPORTANCE_LOW)
+            )
+        }
+        NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Mock location active")
+            .setContentText("Faking GPS location for testing")
+            .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+            .setOngoing(true)
+            .build()
+    }
+
+    companion object {
+        const val ACTION_START = "com.tpgusgh.wheremocklocation.action.START"
+        const val ACTION_UPDATE = "com.tpgusgh.wheremocklocation.action.UPDATE"
+        const val ACTION_STOP = "com.tpgusgh.wheremocklocation.action.STOP"
+        const val EXTRA_LAT = "extra_lat"
+        const val EXTRA_LNG = "extra_lng"
+        private const val CHANNEL_ID = "mock_location_channel"
+        private const val NOTIFICATION_ID = 1
+    }
+}
