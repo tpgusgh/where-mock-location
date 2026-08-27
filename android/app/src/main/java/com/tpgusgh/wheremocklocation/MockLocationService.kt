@@ -12,13 +12,16 @@ import androidx.core.app.NotificationCompat
 
 class MockLocationService : Service() {
 
-    private lateinit var gateway: LocationProviderGateway
+    private lateinit var gateways: List<LocationProviderGateway>
     private var isStarted: Boolean = false
 
     override fun onCreate() {
         super.onCreate()
         val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        gateway = SystemLocationProviderGateway(locationManager)
+        gateways = listOf(
+            SystemLocationProviderGateway(locationManager, LocationManager.GPS_PROVIDER),
+            SystemLocationProviderGateway(locationManager, LocationManager.NETWORK_PROVIDER)
+        )
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -26,7 +29,7 @@ class MockLocationService : Service() {
             ACTION_START -> {
                 if (!isStarted) {
                     startForeground(NOTIFICATION_ID, buildNotification())
-                    gateway.start()
+                    gateways.forEach { it.start() }
                     isStarted = true
                 }
             }
@@ -34,12 +37,12 @@ class MockLocationService : Service() {
                 val lat = intent.getDoubleExtra(EXTRA_LAT, Double.NaN)
                 val lng = intent.getDoubleExtra(EXTRA_LNG, Double.NaN)
                 if (isStarted && !lat.isNaN() && !lng.isNaN()) {
-                    gateway.update(lat, lng)
+                    gateways.forEach { it.update(lat, lng) }
                 }
             }
             ACTION_STOP -> {
                 if (isStarted) {
-                    gateway.stop()
+                    gateways.forEach { it.stop() }
                     stopForeground(STOP_FOREGROUND_REMOVE)
                     stopSelf()
                 }
@@ -47,6 +50,14 @@ class MockLocationService : Service() {
             }
         }
         return START_NOT_STICKY
+    }
+
+    override fun onDestroy() {
+        if (isStarted) {
+            gateways.forEach { it.stop() }
+            isStarted = false
+        }
+        super.onDestroy()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

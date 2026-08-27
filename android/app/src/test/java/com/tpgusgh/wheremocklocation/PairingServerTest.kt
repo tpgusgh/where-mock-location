@@ -83,4 +83,41 @@ class PairingServerTest {
         client.closeBlocking()
         server.stop()
     }
+
+    @Test
+    fun `valid token but update not applied replies error`() {
+        val token = "test-token-456"
+        val startLatch = CountDownLatch(1)
+
+        val server = PairingServer(
+            port = 0,
+            expectedToken = token,
+            onValidUpdate = { _, _ -> false },
+            onStarted = { startLatch.countDown() }
+        )
+        server.start()
+        assertTrue(startLatch.await(3, TimeUnit.SECONDS))
+
+        val responseLatch = CountDownLatch(1)
+        val responses = mutableListOf<String>()
+        val client = object : WebSocketClient(URI("ws://localhost:${server.port}")) {
+            override fun onOpen(handshakedata: ServerHandshake?) {
+                send("""{"token":"$token","lat":37.5,"lng":127.0}""")
+            }
+            override fun onMessage(message: String) {
+                responses.add(message)
+                responseLatch.countDown()
+            }
+            override fun onClose(code: Int, reason: String?, remote: Boolean) {}
+            override fun onError(ex: Exception?) {}
+        }
+
+        client.connectBlocking(3, TimeUnit.SECONDS)
+        assertTrue(responseLatch.await(3, TimeUnit.SECONDS))
+        assertTrue(responses[0].contains("\"status\":\"error\""))
+        assertTrue(responses[0].contains("mocking not active"))
+
+        client.closeBlocking()
+        server.stop()
+    }
 }

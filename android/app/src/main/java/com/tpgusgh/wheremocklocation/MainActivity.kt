@@ -29,11 +29,10 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        requestNotificationPermissionIfNeeded()
+        requestRuntimePermissionsIfNeeded()
 
         presetRepository = PresetRepository(this)
         refreshPresetList()
-        showPairingInfo()
         startPairingServer()
 
         binding.btnToggleMock.setOnClickListener { onToggleMockClicked() }
@@ -45,17 +44,21 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun requestNotificationPermissionIfNeeded() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED
-            ) {
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                    REQUEST_POST_NOTIFICATIONS
-                )
-            }
+    private fun requestRuntimePermissionsIfNeeded() {
+        val missing = mutableListOf<String>()
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            missing += Manifest.permission.ACCESS_FINE_LOCATION
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            missing += Manifest.permission.POST_NOTIFICATIONS
+        }
+        if (missing.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, missing.toTypedArray(), REQUEST_RUNTIME_PERMISSIONS)
         }
     }
 
@@ -109,10 +112,20 @@ class MainActivity : AppCompatActivity() {
             port = PAIRING_PORT,
             expectedToken = pairingToken,
             onValidUpdate = { lat, lng ->
+                val applied = isMocking
                 runOnUiThread {
                     binding.etLatitude.setText(lat.toString())
                     binding.etLongitude.setText(lng.toString())
-                    if (isMocking) sendLocationUpdate(lat, lng)
+                    if (applied) sendLocationUpdate(lat, lng)
+                }
+                applied
+            },
+            onStarted = {
+                runOnUiThread { showPairingInfo() }
+            },
+            onServerError = { ex ->
+                runOnUiThread {
+                    binding.tvPairingInfo.text = "Pairing server failed: ${ex.message}"
                 }
             }
         )
@@ -132,14 +145,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun localIpAddress(): String? {
-        NetworkInterface.getNetworkInterfaces().iterator().forEach { iface ->
-            iface.inetAddresses.iterator().forEach { addr ->
-                if (!addr.isLoopbackAddress && addr.hostAddress?.contains(":") == false) {
-                    return addr.hostAddress
-                }
+        return try {
+            val interfaces = NetworkInterface.getNetworkInterfaces()?.toList() ?: emptyList()
+            val candidates = interfaces.filter { it.isUp && !it.isLoopback }
+            val wifiFirst = candidates.sortedByDescending { it.name.startsWith("wlan") }
+            wifiFirst.firstNotNullOfOrNull { iface ->
+                iface.inetAddresses.asSequence()
+                    .firstOrNull { addr -> !addr.isLoopbackAddress && addr.hostAddress?.contains(":") == false }
+                    ?.hostAddress
             }
+        } catch (e: Exception) {
+            null
         }
-        return null
     }
 
     private fun renderQrCode(content: String): Bitmap {
@@ -156,6 +173,6 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val PAIRING_PORT = 8765
-        private const val REQUEST_POST_NOTIFICATIONS = 1001
+        private const val REQUEST_RUNTIME_PERMISSIONS = 1001
     }
 }
