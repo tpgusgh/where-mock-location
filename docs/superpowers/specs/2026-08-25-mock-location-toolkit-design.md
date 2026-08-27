@@ -49,15 +49,26 @@ SIP-disable (unsupported, unstable across OS updates).
 
 ### 2. macOS app — `where-mock-location-mac`
 
-- SwiftUI menu-bar app.
-- MapKit view: click/drag pin or search an address to pick coordinates.
-- Pairing: scan the phone's QR (via camera or manual token entry),
-  stores `{ip, port, token}` for the session.
+- SwiftUI `MenuBarExtra` app (macOS 13+ deployment target — the API
+  `MenuBarExtra` requires). The map picker is the reason this app
+  exists (unlike the Android map picker, which is a nice-to-have on
+  top of manual entry there), so it stays in v1 scope.
+- MapKit view: click/drag pin or search an address (`MKLocalSearch`)
+  to pick coordinates.
+- Pairing: **manual entry only for v1** — three fields (IP, port,
+  token). Camera-based QR scanning (AVFoundation capture + decode) is
+  deferred as a v2 stretch; it's real added complexity this dev tool
+  doesn't need yet when typing three values works. This is why the
+  Android app now also displays the token as selectable text
+  alongside its QR code (added after the Android app shipped) — the
+  QR alone isn't enough for a manual-entry-only Mac client.
+- Not persisted beyond the current session for v1 (re-pair each
+  launch) — YAGNI, add persistence later if re-typing three fields
+  every launch is actually annoying in practice.
 - On coordinate change, sends `{lat, lng}` over WebSocket to the phone
-  immediately.
-- No persistence of paired devices beyond the current session for v1
-  (re-pair each launch) — YAGNI, add device list later if it's
-  actually annoying in practice.
+  immediately, using `URLSessionWebSocketTask` (stdlib/platform — no
+  new dependency, same reasoning as avoiding Ktor/NanoHTTPD add-ons
+  on the Android side beyond what was already needed there).
 
 ## Protocol
 
