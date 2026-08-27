@@ -15,7 +15,7 @@ struct ContentView: View {
     @State private var token = ""
     @State private var statusMessage = ""
 
-    private let connection = PairingConnection()
+    @State private var connection = PairingConnection()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
