@@ -135,7 +135,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showPairingInfo() {
         val ip = localIpAddress() ?: "unknown"
-        binding.tvPairingInfo.text = "IP: $ip  Port: $PAIRING_PORT"
+        binding.tvPairingInfo.text = "IP: $ip  Port: $PAIRING_PORT  Token: $pairingToken"
         val payload = JSONObject()
             .put("ip", ip)
             .put("port", PAIRING_PORT)
