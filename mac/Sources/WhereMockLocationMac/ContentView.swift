@@ -83,6 +83,7 @@ struct ContentView: View {
             statusMessage = "Enter IP, port, and token first"
             return
         }
+        statusMessage = "Sending…"
         connection.send(target: target, token: token, lat: pin.latitude, lng: pin.longitude) { result in
             DispatchQueue.main.async {
                 switch result {

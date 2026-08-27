@@ -6,7 +6,11 @@ enum PairingConnectionError: Error {
 }
 
 final class PairingConnection {
-    private let session = URLSession(configuration: .default)
+    private let session: URLSession = {
+        let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForRequest = 5
+        return URLSession(configuration: configuration)
+    }()
 
     func send(
         target: PairingTarget,

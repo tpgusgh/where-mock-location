@@ -20,5 +20,7 @@
     <true/>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Where Mock Location sends coordinates to your paired Android phone over your local Wi-Fi network.</string>
 </dict>
 </plist>
