@@ -59,37 +59,6 @@ class MainActivity : AppCompatActivity() {
         }
         if (missing.isNotEmpty()) {
             ActivityCompat.requestPermissions(this, missing.toTypedArray(), REQUEST_RUNTIME_PERMISSIONS)
-        } else {
-            requestBackgroundLocationIfNeeded()
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQUEST_RUNTIME_PERMISSIONS) {
-            val fineLocationIndex = permissions.indexOf(Manifest.permission.ACCESS_FINE_LOCATION)
-            val fineLocationGranted = fineLocationIndex == -1 ||
-                grantResults.getOrNull(fineLocationIndex) == PackageManager.PERMISSION_GRANTED
-            if (fineLocationGranted) {
-                requestBackgroundLocationIfNeeded()
-            }
-        }
-    }
-
-    private fun requestBackgroundLocationIfNeeded() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-            != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
-                REQUEST_BACKGROUND_LOCATION
-            )
         }
     }
 
@@ -205,6 +174,5 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val PAIRING_PORT = 8765
         private const val REQUEST_RUNTIME_PERMISSIONS = 1001
-        private const val REQUEST_BACKGROUND_LOCATION = 1002
     }
 }
