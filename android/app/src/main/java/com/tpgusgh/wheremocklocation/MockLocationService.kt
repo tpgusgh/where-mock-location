@@ -7,7 +7,9 @@ import android.content.Context
 import android.content.Intent
 import android.location.LocationManager
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 
@@ -15,6 +17,28 @@ class MockLocationService : Service() {
 
     private lateinit var gateways: List<LocationProviderGateway>
     private var isStarted: Boolean = false
+    private var lastLat: Double = Double.NaN
+    private var lastLng: Double = Double.NaN
+    private val repostHandler = Handler(Looper.getMainLooper())
+
+    // Android/Google Play Services quietly drops a mock fix that goes stale and
+    // falls back to real GPS — a one-shot setTestProviderLocation() isn't enough
+    // to keep apps like Google Maps showing the fake position. Keep re-pushing
+    // the last coordinates on a timer for as long as mocking is active.
+    private val repostRunnable = object : Runnable {
+        override fun run() {
+            if (isStarted && !lastLat.isNaN() && !lastLng.isNaN()) {
+                try {
+                    gateways.forEach { it.update(lastLat, lastLng) }
+                } catch (e: Exception) {
+                    // 다음 주기에 다시 시도
+                }
+            }
+            if (isStarted) {
+                repostHandler.postDelayed(this, REPOST_INTERVAL_MS)
+            }
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -33,6 +57,7 @@ class MockLocationService : Service() {
                         startForeground(NOTIFICATION_ID, buildNotification())
                         gateways.forEach { it.start() }
                         isStarted = true
+                        repostHandler.postDelayed(repostRunnable, REPOST_INTERVAL_MS)
                     } catch (e: Exception) {
                         Toast.makeText(
                             this,
@@ -51,6 +76,8 @@ class MockLocationService : Service() {
                 if (isStarted && !lat.isNaN() && !lng.isNaN()) {
                     try {
                         gateways.forEach { it.update(lat, lng) }
+                        lastLat = lat
+                        lastLng = lng
                     } catch (e: Exception) {
                         Toast.makeText(this, "위치 업데이트 실패: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
@@ -58,6 +85,8 @@ class MockLocationService : Service() {
             }
             ACTION_STOP -> {
                 if (isStarted) {
+                    isStarted = false
+                    repostHandler.removeCallbacks(repostRunnable)
                     try {
                         gateways.forEach { it.stop() }
                     } catch (e: Exception) {
@@ -66,7 +95,6 @@ class MockLocationService : Service() {
                     stopForeground(STOP_FOREGROUND_REMOVE)
                     stopSelf()
                 }
-                isStarted = false
             }
         }
         return START_NOT_STICKY
@@ -74,12 +102,13 @@ class MockLocationService : Service() {
 
     override fun onDestroy() {
         if (isStarted) {
+            isStarted = false
+            repostHandler.removeCallbacks(repostRunnable)
             try {
                 gateways.forEach { it.stop() }
             } catch (e: Exception) {
                 // 이미 해제됐거나 등록 안 된 provider — 무시
             }
-            isStarted = false
         }
         super.onDestroy()
     }
@@ -109,5 +138,6 @@ class MockLocationService : Service() {
         const val EXTRA_LNG = "extra_lng"
         private const val CHANNEL_ID = "mock_location_channel"
         private const val NOTIFICATION_ID = 1
+        private const val REPOST_INTERVAL_MS = 1000L
     }
 }
