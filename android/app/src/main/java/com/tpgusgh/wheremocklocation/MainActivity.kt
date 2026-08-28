@@ -14,6 +14,13 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import com.tpgusgh.wheremocklocation.databinding.ActivityMainBinding
 import org.json.JSONObject
+import org.osmdroid.config.Configuration
+import org.osmdroid.events.MapEventsReceiver
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.MapEventsOverlay
+import java.io.File
 import java.net.NetworkInterface
 
 class MainActivity : AppCompatActivity() {
@@ -24,11 +31,18 @@ class MainActivity : AppCompatActivity() {
     private var isMocking = false
     private val pairingToken = PairingToken.generate()
 
+    private lateinit var mapMarker: Marker
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Configuration.getInstance().userAgentValue = packageName
+        Configuration.getInstance().osmdroidBasePath = File(filesDir, "osmdroid")
+        Configuration.getInstance().osmdroidTileCache = File(filesDir, "osmdroid/tiles")
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        setupMap()
         requestRuntimePermissionsIfNeeded()
 
         presetRepository = PresetRepository(this)
@@ -60,6 +74,41 @@ class MainActivity : AppCompatActivity() {
         if (missing.isNotEmpty()) {
             ActivityCompat.requestPermissions(this, missing.toTypedArray(), REQUEST_RUNTIME_PERMISSIONS)
         }
+    }
+
+    private fun setupMap() {
+        binding.mapView.setTileSource(TileSourceFactory.MAPNIK)
+        binding.mapView.setMultiTouchControls(true)
+        binding.mapView.controller.setZoom(5.0)
+        val start = GeoPoint(37.5665, 126.9780)
+        binding.mapView.controller.setCenter(start)
+
+        mapMarker = Marker(binding.mapView)
+        mapMarker.position = start
+        binding.mapView.overlays.add(mapMarker)
+
+        val mapEventsOverlay = MapEventsOverlay(object : MapEventsReceiver {
+            override fun singleTapConfirmedHelper(p: GeoPoint): Boolean {
+                binding.etLatitude.setText(p.latitude.toString())
+                binding.etLongitude.setText(p.longitude.toString())
+                mapMarker.position = p
+                binding.mapView.invalidate()
+                return true
+            }
+
+            override fun longPressHelper(p: GeoPoint): Boolean = false
+        })
+        binding.mapView.overlays.add(mapEventsOverlay)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        binding.mapView.onResume()
+    }
+
+    override fun onPause() {
+        binding.mapView.onPause()
+        super.onPause()
     }
 
     override fun onDestroy() {

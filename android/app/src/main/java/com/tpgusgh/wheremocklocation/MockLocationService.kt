@@ -29,14 +29,15 @@ class MockLocationService : Service() {
         when (intent?.action) {
             ACTION_START -> {
                 if (!isStarted) {
-                    startForeground(NOTIFICATION_ID, buildNotification())
                     try {
+                        startForeground(NOTIFICATION_ID, buildNotification())
                         gateways.forEach { it.start() }
                         isStarted = true
                     } catch (e: Exception) {
                         Toast.makeText(
                             this,
-                            "모의 위치 시작 실패: 개발자 옵션에서 이 앱을 '모의 위치 앱 선택'으로 지정했는지 확인해줘",
+                            "모의 위치 시작 실패: 설정 > 앱 > 가짜 위치 > 권한에서 위치 권한을 허용했는지, " +
+                                "개발자 옵션에서 이 앱을 '모의 위치 앱 선택'으로 지정했는지 확인해줘",
                             Toast.LENGTH_LONG
                         ).show()
                         stopForeground(STOP_FOREGROUND_REMOVE)
