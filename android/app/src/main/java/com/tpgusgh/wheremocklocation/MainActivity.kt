@@ -59,6 +59,37 @@ class MainActivity : AppCompatActivity() {
         }
         if (missing.isNotEmpty()) {
             ActivityCompat.requestPermissions(this, missing.toTypedArray(), REQUEST_RUNTIME_PERMISSIONS)
+        } else {
+            requestBackgroundLocationIfNeeded()
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_RUNTIME_PERMISSIONS) {
+            val fineLocationIndex = permissions.indexOf(Manifest.permission.ACCESS_FINE_LOCATION)
+            val fineLocationGranted = fineLocationIndex == -1 ||
+                grantResults.getOrNull(fineLocationIndex) == PackageManager.PERMISSION_GRANTED
+            if (fineLocationGranted) {
+                requestBackgroundLocationIfNeeded()
+            }
+        }
+    }
+
+    private fun requestBackgroundLocationIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
+                REQUEST_BACKGROUND_LOCATION
+            )
         }
     }
 
@@ -75,10 +106,10 @@ class MainActivity : AppCompatActivity() {
         if (!isMocking) {
             startService(Intent(this, MockLocationService::class.java).setAction(MockLocationService.ACTION_START))
             sendLocationUpdate(lat, lng)
-            binding.btnToggleMock.text = "Stop mocking"
+            binding.btnToggleMock.text = "모의 위치 중지"
         } else {
             startService(Intent(this, MockLocationService::class.java).setAction(MockLocationService.ACTION_STOP))
-            binding.btnToggleMock.text = "Start mocking"
+            binding.btnToggleMock.text = "모의 위치 시작"
         }
         isMocking = !isMocking
     }
@@ -125,7 +156,7 @@ class MainActivity : AppCompatActivity() {
             },
             onServerError = { ex ->
                 runOnUiThread {
-                    binding.tvPairingInfo.text = "Pairing server failed: ${ex.message}"
+                    binding.tvPairingInfo.text = "페어링 서버 실패: ${ex.message}"
                 }
             }
         )
@@ -135,7 +166,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showPairingInfo() {
         val ip = localIpAddress() ?: "unknown"
-        binding.tvPairingInfo.text = "IP: $ip  Port: $PAIRING_PORT  Token: $pairingToken"
+        binding.tvPairingInfo.text = "IP: $ip  포트: $PAIRING_PORT  토큰: $pairingToken"
         val payload = JSONObject()
             .put("ip", ip)
             .put("port", PAIRING_PORT)
@@ -174,5 +205,6 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val PAIRING_PORT = 8765
         private const val REQUEST_RUNTIME_PERMISSIONS = 1001
+        private const val REQUEST_BACKGROUND_LOCATION = 1002
     }
 }

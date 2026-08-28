@@ -66,12 +66,12 @@ class MockLocationService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, "Mock location", NotificationManager.IMPORTANCE_LOW)
+                NotificationChannel(CHANNEL_ID, "모의 위치", NotificationManager.IMPORTANCE_LOW)
             )
         }
         NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Mock location active")
-            .setContentText("Faking GPS location for testing")
+            .setContentTitle("모의 위치 작동 중")
+            .setContentText("테스트용으로 GPS 위치를 조작하고 있습니다")
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setOngoing(true)
             .build()
