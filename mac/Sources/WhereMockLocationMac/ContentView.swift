@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import AppKit
 
 struct ContentView: View {
     @State private var cameraPosition = MapCameraPosition.region(
@@ -55,6 +56,10 @@ struct ContentView: View {
             if !statusMessage.isEmpty {
                 Text(statusMessage)
                     .font(.caption)
+            }
+
+            Button("종료") {
+                NSApplication.shared.terminate(nil)
             }
         }
         .padding()
