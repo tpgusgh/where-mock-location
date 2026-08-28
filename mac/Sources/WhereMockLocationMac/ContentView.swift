@@ -34,6 +34,9 @@ struct ContentView: View {
                         sendUpdate()
                     }
                 }
+                .mapControls {
+                    MapZoomStepper()
+                }
             }
             .frame(width: 360, height: 260)
 
