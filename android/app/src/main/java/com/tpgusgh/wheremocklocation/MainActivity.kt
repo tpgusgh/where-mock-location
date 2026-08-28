@@ -91,6 +91,7 @@ class MainActivity : AppCompatActivity() {
             override fun singleTapConfirmedHelper(p: GeoPoint): Boolean {
                 binding.etLatitude.setText(p.latitude.toString())
                 binding.etLongitude.setText(p.longitude.toString())
+                if (isMocking) sendLocationUpdate(p.latitude, p.longitude)
                 mapMarker.position = p
                 binding.mapView.invalidate()
                 return true
