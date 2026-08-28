@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>Where Mock Location</string>
+    <string>가짜 위치</string>
     <key>CFBundleDisplayName</key>
-    <string>Where Mock Location</string>
+    <string>가짜 위치</string>
     <key>CFBundleIdentifier</key>
     <string>com.tpgusgh.wheremocklocationmac</string>
     <key>CFBundleVersion</key>
@@ -21,6 +21,6 @@
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>NSLocalNetworkUsageDescription</key>
-    <string>Where Mock Location sends coordinates to your paired Android phone over your local Wi-Fi network.</string>
+    <string>가짜 위치가 같은 Wi-Fi에 있는 페어링된 안드로이드 폰으로 좌표를 전송합니다.</string>
 </dict>
 </plist>

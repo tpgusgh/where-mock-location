@@ -20,13 +20,13 @@ struct ContentView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                TextField("Search address", text: $searchText)
-                Button("Search") { search() }
+                TextField("주소 검색", text: $searchText)
+                Button("검색") { search() }
             }
 
             MapReader { proxy in
                 Map(position: $cameraPosition) {
-                    Marker("Target", coordinate: pin)
+                    Marker("목표 위치", coordinate: pin)
                 }
                 .onTapGesture { screenPoint in
                     if let coordinate = proxy.convert(screenPoint, from: .local) {
@@ -40,15 +40,15 @@ struct ContentView: View {
             }
             .frame(width: 360, height: 260)
 
-            GroupBox("Pairing") {
+            GroupBox("페어링") {
                 VStack(alignment: .leading, spacing: 4) {
-                    TextField("Phone IP", text: $ip)
-                    TextField("Port", text: $port)
-                    TextField("Token", text: $token)
+                    TextField("폰 IP", text: $ip)
+                    TextField("포트", text: $port)
+                    TextField("토큰", text: $token)
                 }
             }
 
-            Text("Lat: \(pin.latitude, specifier: "%.5f")  Lng: \(pin.longitude, specifier: "%.5f")")
+            Text("위도: \(pin.latitude, specifier: "%.5f")  경도: \(pin.longitude, specifier: "%.5f")")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -65,7 +65,7 @@ struct ContentView: View {
         LocationSearch.search(query: searchText) { coordinate in
             DispatchQueue.main.async {
                 guard let coordinate else {
-                    statusMessage = "No results for \"\(searchText)\""
+                    statusMessage = "\"\(searchText)\" 검색 결과 없음"
                     return
                 }
                 pin = coordinate
@@ -83,19 +83,19 @@ struct ContentView: View {
     private func sendUpdate() {
         let target = PairingTarget(ip: ip, port: port, token: token)
         guard target.isComplete else {
-            statusMessage = "Enter IP, port, and token first"
+            statusMessage = "IP, 포트, 토큰부터 입력해줘"
             return
         }
-        statusMessage = "Sending…"
+        statusMessage = "전송 중…"
         connection.send(target: target, token: token, lat: pin.latitude, lng: pin.longitude) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(.ok(let message)):
-                    statusMessage = "Sent: \(message)"
+                    statusMessage = "전송됨: \(message)"
                 case .success(.error(let message)):
-                    statusMessage = "Rejected: \(message)"
+                    statusMessage = "거부됨: \(message)"
                 case .failure(let error):
-                    statusMessage = "Failed: \(error.localizedDescription)"
+                    statusMessage = "실패: \(error.localizedDescription)"
                 }
             }
         }
