@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>가짜 위치</string>
+    <key>CFBundleDisplayName</key>
+    <string>가짜 위치</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.tpgusgh.wheremocklocationmac</string>
+    <key>CFBundleVersion</key>
+    <string>1.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundleExecutable</key>
+    <string>WhereMockLocationMac</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>가짜 위치가 같은 Wi-Fi에 있는 페어링된 안드로이드 폰으로 좌표를 전송합니다.</string>
+</dict>
+</plist>
