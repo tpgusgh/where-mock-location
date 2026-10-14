@@ -1,13 +1,17 @@
 package com.tpgusgh.wheremocklocation
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.location.Geocoder
+import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.widget.ArrayAdapter
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.google.zxing.BarcodeFormat
@@ -22,6 +26,7 @@ import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.MapEventsOverlay
 import java.io.File
 import java.net.NetworkInterface
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
@@ -76,30 +81,113 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_RUNTIME_PERMISSIONS) {
+            val fineLocationIndex = permissions.indexOf(Manifest.permission.ACCESS_FINE_LOCATION)
+            val fineLocationGranted = fineLocationIndex != -1 &&
+                grantResults.getOrNull(fineLocationIndex) == PackageManager.PERMISSION_GRANTED
+            if (fineLocationGranted) {
+                lastKnownRealLocation()?.let { point ->
+                    binding.mapView.controller.setZoom(15.0)
+                    binding.mapView.controller.setCenter(point)
+                    applyPickedLocation(point.latitude, point.longitude)
+                }
+            }
+        }
+    }
+
     private fun setupMap() {
         binding.mapView.setTileSource(TileSourceFactory.MAPNIK)
         binding.mapView.setMultiTouchControls(true)
-        binding.mapView.controller.setZoom(5.0)
-        val start = GeoPoint(37.5665, 126.9780)
+
+        val real = lastKnownRealLocation()
+        val start = real ?: GeoPoint(37.5665, 126.9780)
+        binding.mapView.controller.setZoom(if (real != null) 15.0 else 5.0)
         binding.mapView.controller.setCenter(start)
 
         mapMarker = Marker(binding.mapView)
         mapMarker.position = start
+        mapMarker.isDraggable = true
+        mapMarker.setOnMarkerDragListener(object : Marker.OnMarkerDragListener {
+            override fun onMarkerDrag(marker: Marker) {}
+            override fun onMarkerDragEnd(marker: Marker) {
+                applyPickedLocation(marker.position.latitude, marker.position.longitude)
+            }
+            override fun onMarkerDragStart(marker: Marker) {}
+        })
         binding.mapView.overlays.add(mapMarker)
 
         val mapEventsOverlay = MapEventsOverlay(object : MapEventsReceiver {
             override fun singleTapConfirmedHelper(p: GeoPoint): Boolean {
-                binding.etLatitude.setText(p.latitude.toString())
-                binding.etLongitude.setText(p.longitude.toString())
-                if (isMocking) sendLocationUpdate(p.latitude, p.longitude)
-                mapMarker.position = p
-                binding.mapView.invalidate()
+                applyPickedLocation(p.latitude, p.longitude)
                 return true
             }
 
             override fun longPressHelper(p: GeoPoint): Boolean = false
         })
         binding.mapView.overlays.add(mapEventsOverlay)
+
+        binding.etLatitude.setText(start.latitude.toString())
+        binding.etLongitude.setText(start.longitude.toString())
+
+        binding.btnSearchLocation.setOnClickListener { onSearchLocationClicked() }
+    }
+
+    private fun applyPickedLocation(lat: Double, lng: Double, recenterMap: Boolean = false) {
+        binding.etLatitude.setText(lat.toString())
+        binding.etLongitude.setText(lng.toString())
+        val point = GeoPoint(lat, lng)
+        mapMarker.position = point
+        if (recenterMap) binding.mapView.controller.setCenter(point)
+        binding.mapView.invalidate()
+        if (isMocking) sendLocationUpdate(lat, lng)
+    }
+
+    private fun lastKnownRealLocation(): GeoPoint? {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            return null
+        }
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val providers = listOf(
+            LocationManager.GPS_PROVIDER,
+            LocationManager.NETWORK_PROVIDER,
+            LocationManager.PASSIVE_PROVIDER
+        )
+        val best = providers.mapNotNull {
+            try {
+                locationManager.getLastKnownLocation(it)
+            } catch (e: Exception) {
+                null
+            }
+        }.maxByOrNull { it.time }
+        return best?.let { GeoPoint(it.latitude, it.longitude) }
+    }
+
+    private fun onSearchLocationClicked() {
+        val query = binding.etSearchLocation.text.toString()
+        if (query.isBlank()) return
+        Thread {
+            val result = try {
+                @Suppress("DEPRECATION")
+                Geocoder(this, Locale.getDefault()).getFromLocationName(query, 1)?.firstOrNull()
+            } catch (e: Exception) {
+                null
+            }
+            runOnUiThread {
+                if (result == null) {
+                    Toast.makeText(this, "\"$query\" 검색 결과 없음", Toast.LENGTH_SHORT).show()
+                } else {
+                    applyPickedLocation(result.latitude, result.longitude, recenterMap = true)
+                }
+            }
+        }.start()
     }
 
     override fun onResume() {
